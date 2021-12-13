@@ -1,13 +1,15 @@
 using RouletteGameApi.Models;
 using RouletteGameApi.Services;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
+
 namespace RouletteGameApi.Controllers;
 [ApiController]
 [Route("api/[controller]")]
 public class RoulettesController : ControllerBase
 {
-    private readonly RoulettesService _roulettesService;
-    public RoulettesController(RoulettesService roulettesService) => _roulettesService = roulettesService;
+    private readonly IRoulettesService _roulettesService;
+    public RoulettesController(IRoulettesService roulettesService) => _roulettesService = roulettesService;
 
     [HttpPost]
     public async Task<IActionResult> Post()
@@ -36,4 +38,5 @@ public class RoulettesController : ControllerBase
             return BadRequest(response);
         }
     }
+    
 }

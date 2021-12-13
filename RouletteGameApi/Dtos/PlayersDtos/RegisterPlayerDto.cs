@@ -1,4 +1,3 @@
-using RouletteGameApi.Models;
 namespace RouletteGameApi.Dtos;
 public class RegisterPlayerDto
 {

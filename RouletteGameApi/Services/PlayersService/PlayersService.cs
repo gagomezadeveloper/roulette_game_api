@@ -3,45 +3,42 @@ using RouletteGameApi.Models;
 using RouletteGameApi.Data;
 using Microsoft.Extensions.Options;
 using MongoDB.Driver;
+using System.Security.Claims;
+using Microsoft.IdentityModel.Tokens;
+using System.IdentityModel.Tokens.Jwt;
+
 namespace RouletteGameApi.Services;
 public class PlayersService : IPlayersService
 {
     private readonly IMongoCollection<Roulette> _context;
+    private readonly IConfiguration _configuration;
 
-    public PlayersService(IOptions<StoreDatabaseSettings> storeDatabaseSettings)
+    public PlayersService(IOptions<StoreDatabaseSettings> storeDatabaseSettings, IConfiguration configuration)
     {
         var mongoClient = new MongoClient(storeDatabaseSettings.Value.ConnectionString);
         var mongoDatabase = mongoClient.GetDatabase(storeDatabaseSettings.Value.DatabaseName);
         _context = mongoDatabase.GetCollection<Roulette>(storeDatabaseSettings.Value.CollectionName);
+        _configuration = configuration;
     }
 
-    public Task<ServiceResponseDto<string>> LoginPlayer(LoginPlayerDto login)
+    public async Task<ServiceResponseDto<string>> LoginPlayer(LoginPlayerDto login)
     {
-        throw new NotImplementedException();
-    }
-
-    public async Task<ServiceResponseDto<List<GetRouletteDto>>> GetRoulettes()
-    {
-        var result = new ServiceResponseDto<List<GetRouletteDto>>();
+        var result = new ServiceResponseDto<string>();
         try
         {
-            var data = await _context.Find(_ => true).ToListAsync();
-            var query = from r in await _context.Find(_ => true).ToListAsync()
-                        orderby r.Created descending
-                        select new GetRouletteDto
-                        {
-                            Id = r.Id,
-                            CurrentAmount = r.CurrentAmount,
-                            Players = (from p in r.Players select new GetPlayerDto(p)).ToList(),
-                            State = r.IsClosed ? "closed" : "open",
-                            Created = $"{r.Created:yyyy-MM-dd:HH:mm:ss}Z"
-                        };
-            result.Data = query.ToList();
+            var roulette = (await _context.FindAsync(r => r.Id == login.RouletteId)).FirstOrDefault();
+            if (roulette is null) throw new Exception($"Roulette not found.");
+            if (roulette.IsClosed) throw new Exception($"The roulette {login.RouletteId} is closed.");
+            var player = roulette.Players.FirstOrDefault(p => p.Username.ToUpper() == login.Username.ToUpper());
+            if (player is null) throw new Exception($"The player {login.Username} is not in the game.");
+            result.Data = CreateToken(login);
+            result.Message = $"Welcome player {login.Username}";
         }
         catch (Exception ex)
         {
             result.Success = false;
-            result.Message = $"{ex}";
+            result.Data = null;
+            result.Message = $"{ex.Message}";
         }
         return result;
     }
@@ -54,12 +51,14 @@ public class PlayersService : IPlayersService
             if (register.Credit < 0) throw new Exception("Player's credit must be greater than zero.");
             var roulette = (await _context.FindAsync(r => r.Id == register.RouletteId)).FirstOrDefault();
             if (roulette is null) throw new Exception($"Roulette not found.");
+            if (roulette.IsClosed) throw new Exception($"The roulette {register.RouletteId} is closed.");
             if (roulette.Players.FirstOrDefault(p => p.Username.ToUpper() == register.Username.ToUpper()) is not null) throw new Exception($"The player {register.Username} is already in the game.");
             roulette.Players.Add(new Player { Username = register.Username, Credit = register.Credit });
             // TODO: Validate concurrency
             await _context.ReplaceOneAsync(r => r.Id == register.RouletteId, roulette);
             var player = roulette.Players.Find(p => p.Username.ToUpper() == register.Username.ToUpper());
             if (player is null) throw new Exception($"Player not found.");
+            result.Message = $"{register.Username} welcome to roulette {register.RouletteId}!";
             result.Data = new GetPlayerDto(player);
         }
         catch (Exception ex)
@@ -71,4 +70,27 @@ public class PlayersService : IPlayersService
         return result;
     }
 
+    private string CreateToken(LoginPlayerDto player)
+    {
+        List<Claim> claims = new List<Claim>()
+        {
+            new Claim(ClaimTypes.NameIdentifier, player.Username),
+            new Claim(ClaimTypes.Name, player.RouletteId),
+        };
+        var apiToken = _configuration.GetSection("RouletteStoreDatabase:ApiToken").Value;
+        var key = new SymmetricSecurityKey
+        (
+            System.Text.Encoding.UTF8.GetBytes(apiToken)
+        );
+        var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha512Signature);
+        var tokenDescriptor = new SecurityTokenDescriptor
+        {
+            Subject = new ClaimsIdentity(claims),
+            Expires = DateTime.UtcNow.AddDays(Int16.Parse(_configuration.GetSection("RouletteStoreDatabase:TokenExpirationDaysTime").Value)),
+            SigningCredentials = credentials
+        };
+        var tokenHandler = new JwtSecurityTokenHandler();
+        var token = tokenHandler.CreateToken(tokenDescriptor);
+        return tokenHandler.WriteToken(token);
+    }    
 }
