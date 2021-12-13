@@ -1,13 +1,15 @@
 using RouletteGameApi.Models;
 using RouletteGameApi.Services;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
+
 namespace RouletteGameApi.Controllers;
 [ApiController]
 [Route("api/[controller]")]
 public class RoulettesController : ControllerBase
 {
-    private readonly RoulettesService _roulettesService;
-    public RoulettesController(RoulettesService roulettesService) => _roulettesService = roulettesService;
+    private readonly IRoulettesService _roulettesService;
+    public RoulettesController(IRoulettesService roulettesService) => _roulettesService = roulettesService;
 
     [HttpPost]
     public async Task<IActionResult> Post()
@@ -27,6 +29,21 @@ public class RoulettesController : ControllerBase
     public async Task<IActionResult> GetRoulettes()
     {
         var response = await _roulettesService.GetRoulettes();
+        if (response.Success)
+        {
+            return Ok(response);
+        }
+        else
+        {
+            return BadRequest(response);
+        }
+    }
+
+    [Authorize]
+    [HttpPost("GetPlayerRoulettes")]
+    public async Task<IActionResult> GetPlayerRoulettes()
+    {
+        var response = await _roulettesService.GetPlayerRoulettes();
         if (response.Success)
         {
             return Ok(response);

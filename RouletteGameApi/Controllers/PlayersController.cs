@@ -6,8 +6,8 @@ namespace RouletteGameApi.Controllers;
 [Route("api/[controller]")]
 public class PlayersController : ControllerBase
 {
-    private readonly PlayersService _playersService;
-    public PlayersController(PlayersService playersService) => _playersService = playersService;
+    private readonly IPlayersService _playersService;
+    public PlayersController(IPlayersService playersService) => _playersService = playersService;
 
     [HttpPost("RegisterPlayer")]
     public async Task<IActionResult> RegisterPlayer(RegisterPlayerDto register)
@@ -23,10 +23,10 @@ public class PlayersController : ControllerBase
         }
     }
 
-    [HttpPost("GetRoulettes")]
-    public async Task<IActionResult> GetRoulettes()
+    [HttpPost("LoginPlayer")]
+    public async Task<IActionResult> LoginPlayer(LoginPlayerDto login)
     {
-        var response = await _playersService.GetRoulettes();
+        var response = await _playersService.LoginPlayer(login);
         if (response.Success)
         {
             return Ok(response);
@@ -36,4 +36,5 @@ public class PlayersController : ControllerBase
             return BadRequest(response);
         }
     }
+
 }
