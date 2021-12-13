@@ -38,19 +38,5 @@ public class RoulettesController : ControllerBase
             return BadRequest(response);
         }
     }
-
-    [Authorize]
-    [HttpPost("GetPlayerRoulettes")]
-    public async Task<IActionResult> GetPlayerRoulettes()
-    {
-        var response = await _roulettesService.GetPlayerRoulettes();
-        if (response.Success)
-        {
-            return Ok(response);
-        }
-        else
-        {
-            return BadRequest(response);
-        }
-    }
+    
 }

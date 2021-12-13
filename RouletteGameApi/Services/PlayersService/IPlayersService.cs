@@ -6,4 +6,5 @@ public interface IPlayersService
 {
     Task<ServiceResponseDto<GetPlayerDto>> RegisterPlayer(RegisterPlayerDto register);
     Task<ServiceResponseDto<string>> LoginPlayer(LoginPlayerDto login);
+    
 }

@@ -11,6 +11,7 @@ public class GetRouletteDto
     public string State { get; set; } = null!;
     public List<GetPlayerDto> Players { get; set; } = new List<GetPlayerDto>();
     public Double CurrentAmount { get; set; }
+    public Double MaxAmount { get; set; }
     public string? Created { get; set; }
 
     public GetRouletteDto(Roulette roulette)

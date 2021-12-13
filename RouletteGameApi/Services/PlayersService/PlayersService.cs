@@ -28,6 +28,7 @@ public class PlayersService : IPlayersService
         {
             var roulette = (await _context.FindAsync(r => r.Id == login.RouletteId)).FirstOrDefault();
             if (roulette is null) throw new Exception($"Roulette not found.");
+            if (roulette.IsClosed) throw new Exception($"The roulette {login.RouletteId} is closed.");
             var player = roulette.Players.FirstOrDefault(p => p.Username.ToUpper() == login.Username.ToUpper());
             if (player is null) throw new Exception($"The player {login.Username} is not in the game.");
             result.Data = CreateToken(login);
@@ -50,12 +51,14 @@ public class PlayersService : IPlayersService
             if (register.Credit < 0) throw new Exception("Player's credit must be greater than zero.");
             var roulette = (await _context.FindAsync(r => r.Id == register.RouletteId)).FirstOrDefault();
             if (roulette is null) throw new Exception($"Roulette not found.");
+            if (roulette.IsClosed) throw new Exception($"The roulette {register.RouletteId} is closed.");
             if (roulette.Players.FirstOrDefault(p => p.Username.ToUpper() == register.Username.ToUpper()) is not null) throw new Exception($"The player {register.Username} is already in the game.");
             roulette.Players.Add(new Player { Username = register.Username, Credit = register.Credit });
             // TODO: Validate concurrency
             await _context.ReplaceOneAsync(r => r.Id == register.RouletteId, roulette);
             var player = roulette.Players.Find(p => p.Username.ToUpper() == register.Username.ToUpper());
             if (player is null) throw new Exception($"Player not found.");
+            result.Message = $"{register.Username} welcome to roulette {register.RouletteId}!";
             result.Data = new GetPlayerDto(player);
         }
         catch (Exception ex)
@@ -89,6 +92,5 @@ public class PlayersService : IPlayersService
         var tokenHandler = new JwtSecurityTokenHandler();
         var token = tokenHandler.CreateToken(tokenDescriptor);
         return tokenHandler.WriteToken(token);
-    }
-
+    }    
 }

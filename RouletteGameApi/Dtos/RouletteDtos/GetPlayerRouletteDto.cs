@@ -1,7 +1,6 @@
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
 using RouletteGameApi.Models;
-
 namespace RouletteGameApi.Dtos;
 public class GetPlayerRouletteDto
 {
