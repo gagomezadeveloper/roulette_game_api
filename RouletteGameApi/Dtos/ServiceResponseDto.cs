@@ -1,0 +1,8 @@
+namespace RouletteGameApi.Dtos;
+public class ServiceResponseDto<T>
+{
+    public bool Success { get; set; } = true;
+    public string Message { get; set; } = string.Empty;
+    public string ErrorCode { get; set; } = string.Empty;
+    public T? Data { get; set; }
+}
